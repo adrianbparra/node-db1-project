@@ -7,35 +7,46 @@ const server = express();
 server.use(express.json());
 
 server.get("/api/accounts",(req,res) => {
-    db("accounts")
+
+    const {limit, sortby, sortdir} = req.body;
+
+    if(sortby === "budget" | sortby === "id" | sortby === "name" | sortby === undefined) {
+
+        db("accounts").limit(limit? limit : Infinity).orderBy(sortby ? sortby : "id", sortdir ? sortdir : "asc")
         .then(accounts => {
             res.status(200).json(accounts)
         })
         .catch(err => {
-            res.status(500).json({err, errorMessage: "No response from server"})
+            res.status(500).json({err, errorMessage: "Server error"})
         })
+        
+    } else {
+        res.status(400).json({errorMessage: "Sort by only for name, id, or budget"})
+    }
+
+    
 })
 
-server.post("/api/accounts", (req, res) => {
+server.post("/api/accounts", accountMatch, (req, res) => {
 
     const accountInfo = req.body;
     if( "name" in accountInfo && "budget" in accountInfo) {
 
         db("accounts").insert(accountInfo)
         .then(count => {
-            res.status(201).json({count})
+            res.status(201).json({"id": count[0],...accountInfo})
         })
         .catch(err => {
             res.status(500).json({err, errorMessage: "Unable to add Account"})
         })
 
     } else {
-        res.status(400).json({errorMessage: "Please include name and budget."})
+        res.status(400).json({errorMessage: "Please include name and budget. Name has to be unique"})
     }
 
 })
 
-server.put("/api/accounts/:id", (req,res) => {
+server.put("/api/accounts/:id", accountMatch, (req,res) => {
     
     const {name, budget} = req.body;
     const { id } = req.params;
@@ -90,6 +101,28 @@ server.get("/api/accounts/:id", (req,res) => {
         })
         .catch(err => res.status(500).json({errorMessage:"Server Error unable to search"}))
 })
+
+
+
+
+
+function accountMatch  (req,res,next) {
+
+    // const { id } = req.params;
+    const {name} = req.body;
+
+    db("accounts").where("name", name).first()
+        .then(account => {
+            if(account) {
+                res.status(400).json({errorMessage: "Account name is taken already"})
+            } else {
+                next()
+            }
+        })
+        .catch(err => {
+            res.status(500).json({errorMessage: "Server failed to match name"})
+        })
+}
 
 
 
