@@ -6,9 +6,9 @@ const server = express();
 
 server.use(express.json());
 
-server.get("/api/accounts",(req,res) => {
+server.get("/api/accounts/",(req,res) => {
 
-    const {limit, sortby, sortdir} = req.body;
+    const {limit, sortby, sortdir} = req.query;
 
     if(sortby === "budget" | sortby === "id" | sortby === "name" | sortby === undefined) {
 
@@ -19,7 +19,7 @@ server.get("/api/accounts",(req,res) => {
         .catch(err => {
             res.status(500).json({err, errorMessage: "Server error"})
         })
-        
+
     } else {
         res.status(400).json({errorMessage: "Sort by only for name, id, or budget"})
     }
